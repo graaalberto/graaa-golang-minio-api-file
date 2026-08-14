@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # 1. API de Gerenciamento de Arquivos em Go
+  govault-file-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: govault_file_api
+    ports:
+      - "8080:8080"
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8080
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_USE_SSL=false
+      - MINIO_DEFAULT_BUCKET=user-files
+      - AUTH_API_URL=http://golang-auth-api:8000
+      - JWT_SECRET_KEY=my-super-secure-256-bit-secret-key-auth
+      - JWT_ISSUER=golang-auth-api
+      - AUTH_VALIDATION_MODE=local_signature
+      - MAX_UPLOAD_SIZE_MB=100
+    depends_on:
+      minio:
+        condition: service_healthy
+      golang-auth-api:
+        condition: service_started
+    networks:
+      - govault-network
+    restart: unless-stopped
+
+  # 2. MinIO S3 Object Storage & Web Console
+  minio:
+    image: minio/minio:RELEASE.2024-03-03T17-50-39Z
+    container_name: minio_s3
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000" # MinIO S3 API
+      - "9001:9001" # MinIO Web Console UI
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+      - MINIO_BROWSER=on
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - govault-network
+    restart: unless-stopped
+
+  # 3. Golang Auth API (https://github.com/gjovanovicst/golang-auth-api)
+  golang-auth-api:
+    image: golang:1.22-alpine
+    container_name: golang_auth_api
+    working_dir: /app
+    command: >
+      sh -c "git clone https://github.com/gjovanovicst/golang-auth-api.git . &&
+             go mod download &&
+             go run main.go"
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - DB_HOST=postgres-auth
+      - DB_USER=authuser
+      - DB_PASSWORD=authpass123
+      - DB_NAME=authdb
+      - DB_PORT=5432
+      - JWT_SECRET=my-super-secure-256-bit-secret-key-auth
+    depends_on:
+      - postgres-auth
+    networks:
+      - govault-network
+    restart: unless-stopped
+
+  # 4. PostgreSQL para o golang-auth-api
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: postgres_auth_db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=authuser
+      - POSTGRES_PASSWORD=authpass123
+      - POSTGRES_DB=authdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - govault-network
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+  postgres_data:
+
+networks:
+  govault-network:
+    driver: bridge

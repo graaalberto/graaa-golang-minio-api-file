@@ -1,6 +1,6 @@
-# 🚀 GoVault - Enterprise File Management API com MinIO e Golang Auth API
+# 🚀 Graaa - Enterprise File Management API com MinIO e Golang Auth API
 
-Uma API de gerenciamento de arquivos completa, segura e de alto desempenho desenvolvida em **Go (Golang)**, conectada ao **MinIO (S3-compatible Object Storage)** e autenticada via **JWT** integrado ao [golang-auth-api](https://github.com/gjovanovicst/golang-auth-api).
+Uma API de gerenciamento de arquivos completa, segura e de alto desempenho desenvolvida em **Go (Golang)**, conectada ao **MinIO (S3-compatible Object Storage)** e autenticada via **JWT** integrado ao [graaa-golang-auth-api](https://github.com/gjovanovicst/golang-auth-api).
 
 ---
 
@@ -24,7 +24,7 @@ O sistema adota uma arquitetura em camadas (Clean Architecture) com desacoplamen
                │
                ▼ Bearer JWT Token
   ┌────────────────────────────────────────────────────────┐
-  │                 GoVault File API                       │
+  │                 Graaa File API                       │
   │                                                        │
   │  1. Middlewares:                                       │
   │     ├─ JWT Auth (Validação contra golang-auth-api)     │
@@ -46,13 +46,13 @@ O sistema adota uma arquitetura em camadas (Clean Architecture) com desacoplamen
          ▼                                    ▼
 ┌──────────────────┐               ┌───────────────────────┐
 │ MinIO S3 Storage │               │    golang-auth-api    │
-│  (Port 9000)     │               │     (Port 8000)       │
+│  (Port 9000)     │               │     (Port 8080)       │
 └──────────────────┘               └───────────────────────┘
 ```
 
 ---
 
-## 🔐 Integração com golang-auth-api
+## 🔐 Integração com graaa-golang-auth-api
 
 O sistema suporta dois modos configuráveis de validação de token:
 
@@ -61,7 +61,7 @@ O sistema suporta dois modos configuráveis de validação de token:
 - O **GoVault** valida localmente a assinatura em menos de **0.1ms**, sem latência de rede adicional.
 
 ### Modo 2: Introspecção Remota (Webhook)
-- O GoVault chama `GET http://golang-auth-api:8000/api/auth/user` passando o Bearer token para validação dinâmica.
+- O Graaa chama `GET http://localhost:8080/api/auth/user` passando o Bearer token para validação dinâmica.
 
 ---
 
@@ -98,24 +98,23 @@ O sistema suporta dois modos configuráveis de validação de token:
 
 ```bash
 # 1. Clonar o repositório
-git clone https://github.com/seu-usuario/govault-api.git
+git clone https://github.com/graaalberto/graaa-golang-minio-api-file.git
 
-cd govault-api
+cd graaa-golang-minio-api-file
 
 go mod tidy - para baixar todas pendencia 
 
 go run cmd/api/main.go 
-
 ou 
-
 docker-compose up.
+````
 # 2. Iniciar todos os serviços (Go API + MinIO + Auth API + PostgreSQL)
 docker-compose up -d --build
 
 # 3. Acessar as interfaces:
-# - Go File API:        http://localhost:8080/healthz
+# - Go File API:        http://localhost:8000/healthz
 # - MinIO Web Console:  http://localhost:9001 (User: minioadmin / Pass: minioadmin123)
-# - Golang Auth API:    http://localhost:8000
+# - Golang Auth API:    http://localhost:8080
 
 
 
@@ -124,95 +123,12 @@ docker-compose up -d --build
 
 `Upload de Arquivo Único``
 /api/v1/files/upload
-curl -X POST http://localhost:8080/api/v1/files/upload \
+curl -X POST http://localhost:8000/api/v1/files/upload \
   -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
   -F "file=@/caminho/do/relatorio.pdf" \
   -F "is_public=false" \
   -F "tags=financeiro,relatorio"
-
-  Listar Arquivos do Usuário
-  /api/v1/files
-  curl -X GET "http://localhost:8080/api/v1/files?search=relatorio" \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
-
-  Obter Metadados do Arquivo
-  /api/v1/files/:id
-  curl -X GET http://localhost:8080/api/v1/files/550e8400-e29b-41d4-a716-446655440000 \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
-
-  Download com Streaming Seguro
-/api/v1/files/:id/download
-curl -X GET http://localhost:8080/api/v1/files/550e8400-e29b-41d4-a716-446655440000/download \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
-  --output "download_relatorio.pdf"
-
-  Visualização Inline Segura (Preview)
-  /api/v1/files/:id/preview
-  curl -X GET http://localhost:8080/api/v1/files/550e8400-e29b-41d4-a716-446655440000/preview \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
-
-  Gerar URL Pré-Assinada de Download
-  /api/v1/files/:id/presigned-download
-  curl -X POST http://localhost:8080/api/v1/files/550e8400-e29b-41d4-a716-446655440000/presigned-download \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"expiry_seconds": 900}'
-
-  Gerar URL Pré-Assinada de Upload Direto
-  /api/v1/files/presigned-upload
-curl -X POST http://localhost:8080/api/v1/files/presigned-upload \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"filename": "video_treinamento.mp4", "expiry_seconds": 1800}'
-
-Atualizar Metadados e Tags
-/api/v1/files/:id/metadata
-curl -X PUT http://localhost:8080/api/v1/files/550e8400-e29b-41d4-a716-446655440000/metadata \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"tags": ["documentos", "aprovado"], "is_public": false}'
-
-Excluir Arquivo Único
-/api/v1/files/:id
-curl -X DELETE http://localhost:8080/api/v1/files/550e8400-e29b-41d4-a716-446655440000 \
-  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
-
-
-
-
-{
-    "success": true,
-    "message": "Arquivo enviado com sucesso para o MinIO",
-    "data": {
-        "id": "ba103dbb-cd2b-43c6-9df2-6806b4838ec6",
-        "name": "ba103dbb-cd2b-43c6-9df2-6806b4838ec6.docx",
-        "original_name": "bi_Emaculada.docx",
-        "bucket": "users-file",
-        "path": "uploads/ba103dbb-cd2b-43c6-9df2-6806b4838ec6.docx",
-        "size_bytes": 3432203,
-        "mime_type": "application/zip",
-        "checksum_sha256": "b0fcef6c02ed74ae3904aa9551c58f2a9f6f6c14df85b85b2512474c78ee6fed",
-        "uploaded_by": {
-            "id": "",
-            "email": "",
-            "role": "user"
-        },
-        "upload_date": "2026-08-14T20:04:44.425639Z",
-        "is_public": false,
-        "tags": [
-            "Bilhete"
-        ],
-        "encryption": "SSE-S3"
-    }
-
-{
-    "success": true,
-    "data": {
-        "total": 0,
-        "files": null
-    }
-}
-
+Resposta:
 {
     "success": true,
     "message": "Arquivo enviado com sucesso para o MinIO",
@@ -234,7 +150,57 @@ curl -X DELETE http://localhost:8080/api/v1/files/550e8400-e29b-41d4-a716-446655
         "is_public": false,
         "tags": [
             "Bilhete"
-        ],
+       ],
         "encryption": "SSE-S3"
     }
 }
+
+  Listar Arquivos do Usuário
+  /api/v1/files
+  curl -X GET "http://localhost:8000/api/v1/files?search=relatorio" \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
+
+  Obter Metadados do Arquivo
+  /api/v1/files/:id
+  curl -X GET http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
+
+  Download com Streaming Seguro
+/api/v1/files/:id/download
+curl -X GET http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-446655440000/download \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
+  --output "download_relatorio.pdf"
+
+  Visualização Inline Segura (Preview)
+  /api/v1/files/:id/preview
+  curl -X GET http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-446655440000/preview \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
+
+  Gerar URL Pré-Assinada de Download
+  /api/v1/files/:id/presigned-download
+  curl -X POST http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-446655440000/presigned-download \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"expiry_seconds": 900}'
+
+  Gerar URL Pré-Assinada de Upload Direto
+  /api/v1/files/presigned-upload
+curl -X POST http://localhost:8000/api/v1/files/presigned-upload \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"filename": "video_treinamento.mp4", "expiry_seconds": 1800}'
+
+Atualizar Metadados e Tags
+/api/v1/files/:id/metadata
+curl -X PUT http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-446655440000/metadata \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"tags": ["documentos", "aprovado"], "is_public": false}'
+
+Excluir Arquivo Único
+/api/v1/files/:id
+curl -X DELETE http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <SEU_TOKEN_JWT>"
+
+
+
